@@ -40,6 +40,20 @@
         android:src="@drawable/radio_button_unchecked">
     </ImageButton>
 
+    <!-- Prediction image -->
+    <ImageView
+        android:id="@+id/prediction_imageview"
+        android:layout_width="150dp"
+        android:layout_height="100dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:layout_marginHorizontal="0dp"
+        android:layout_marginBottom="25dp"
+        android:scaleType="centerCrop"
+        android:background="@color/black">
+    </ImageView>
+
     <!-- Prediction label -->
     <TextView
         android:id="@+id/prediction_textview"
