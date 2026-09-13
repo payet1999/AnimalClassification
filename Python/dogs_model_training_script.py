@@ -3,37 +3,59 @@
 # DDBB: https://www.kaggle.com/datasets/jessicali9530/stanford-dogs-dataset + shiba inu (30 pics)
 # Model -> loss: 1.3236 - accuracy: 0.6195 - val_loss: 1.4665 - val_accuracy: 0.5954
 
-
 # Import libraries
+import argparse
 import os  # For interacting with the file system
 import shutil  # For managing files and directories in a cross-platform manner
+
 import keras  # For building deep learning models
+# Training callbacks
+from keras.callbacks import EarlyStopping, ModelCheckpoint  # For training callbacks
+# Model architecture
+from keras import Sequential  # For building sequential models
+# Pre-trained models
+from keras.applications import InceptionV3, ResNet152V2, Xception  # For using pre-trained models
+from keras.layers import Dense, Dropout, GlobalAvgPool2D as GAP  # For defining model layers
+from keras.models import load_model  # For loading pre-trained models
+# Data preprocessing
+from keras.preprocessing.image import ImageDataGenerator  # For image data augmentation
+import matplotlib.pyplot as plt  # For creating static plots
 import numpy as np  # For numerical operations on arrays
-# from glob import glob  # For finding file paths
+import plotly.graph_objs as go  # For interactive visualizations
+import scipy
+# Data visualization
+import seaborn as sns  # For statistical visualizations
 import tensorflow.lite.python.lite
 from tqdm import tqdm  # For progress bars
 
-# Data preprocessing
-from keras.preprocessing.image import ImageDataGenerator  # For image data augmentation
+# from glob import glob  # For finding file paths
 
-# Data visualization
-import seaborn as sns  # For statistical visualizations
-import plotly.graph_objs as go  # For interactive visualizations
-import matplotlib.pyplot as plt  # For creating static plots
 
-# Model architecture
-from keras import Sequential  # For building sequential models
-from keras.models import load_model  # For loading pre-trained models
-from keras.layers import Dense, GlobalAvgPool2D as GAP, Dropout  # For defining model layers
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Train and export ResNet152V2 model for Dog Breed Classification."
+    )
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        default="C:/Users/adria/Desktop/Projectes/DogBreedsClassification/images/Images",
+        help="Path to the dataset directory"
+    )
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
+    parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs")
+    parser.add_argument("--img_height", type=int, default=256, help="Target image height")
+    parser.add_argument("--img_width", type=int, default=256, help="Target image width")
+    parser.add_argument(
+        "--output_model",
+        type=str,
+        default="dogBreedClassificationModel.tflite",
+        help="Output path for the TFLite model"
+    )
+    return parser.parse_args()
 
-# Training callbacks
-from keras.callbacks import ModelCheckpoint, EarlyStopping  # For training callbacks
 
-# Pre-trained models
-from keras.applications import InceptionV3, Xception, ResNet152V2  # For using pre-trained models
-import scipy
-
-def pie_chart():
+def pie_chart(class_names, class_sizes):
     """
     Plot a pie graph of the number of images in each class
     :return:
@@ -51,7 +73,8 @@ def pie_chart():
     fig.show()
 
 
-def bar_chart():
+
+def bar_chart(class_names, class_sizes):
     """
     Plot a bar graph of the number of images in each class
     :return:
@@ -67,7 +90,12 @@ def bar_chart():
     plt.grid()
 
     # Add a horizontal line to show the mean number of images across all classes
-    plt.axhline(np.mean(class_sizes), color='black', linestyle=':', label="Average number of images per class")
+    plt.axhline(
+        np.mean(class_sizes),
+        color='black',
+        linestyle=':',
+        label="Average number of images per class"
+    )
 
     # Add a legend to the plot
     plt.legend()
@@ -111,7 +139,7 @@ def get_random_data(data_tuple):
     return image, label
 
 
-def plot_dataset():
+def plot_dataset(train_data, class_names):
     # Set the figure size for the plot
     plt.figure(figsize=(20, 20))
 
@@ -132,7 +160,8 @@ def plot_dataset():
         counter += 1
 
         # End the loop when 25 images have been plotted
-        if counter >= 26: break
+        if counter >= 26:
+            break
 
     # Adjust the layout and display the plot
     plt.tight_layout()
@@ -140,11 +169,11 @@ def plot_dataset():
 
 
 if __name__ == '__main__':
+    args = parse_args()
 
-
-    """ 2. Exploring the Stanford Dogs Dataset: Obtaining Class Names and Counting Classes """
+    """ Exploring the Stanford Dogs Dataset: Obtaining Class Names and Counting Classes """
     # Set the path to the dataset
-    data_path = 'C:/Users/adria/Desktop/Projectes/DogBreedsClassification/images/Images'
+    data_path = args.data_path
 
     # Get a list of class names from the data path
     class_names = sorted(os.listdir(data_path))
@@ -157,24 +186,22 @@ if __name__ == '__main__':
     print(' '.join(class_names))
     print("Number of Classes:", num_classes)
 
-
-    """ 3. Examining Class Distribution in the Dataset """
+    """ Examining Class Distribution in the Dataset """
     # Get the number of samples in each class
     class_sizes = []
     for name in class_names:
-        class_size = len(os.listdir(data_path + "/" + name))
+        class_size = len(os.listdir(os.path.join(data_path, name)))
         class_sizes.append(class_size)
 
     # Print the class distribution
     print("Class Distribution:\n", class_sizes)
 
-    """ 4. Visualizing Class Distribution in the Animal-10 Dataset using a Pie Chart and Bar Graph """
-    # pie_chart()
+    """ Visualizing Class Distribution in the Animal-10 Dataset using a Pie Chart and Bar Graph """
+    # pie_chart(class_names, class_sizes)
 
-    # bar_chart()
+    # bar_chart(class_names, class_sizes)
 
-
-    """ 6. Data Preparation and Augmentation """
+    """ Data Preparation and Augmentation """
     # Initialize Generator with the specified image transformations and preprocessing
     # rescale: normalizes pixel values from 0-255 to 0-1
     # horizontal_flip: randomly flips images horizontally
@@ -186,7 +213,12 @@ if __name__ == '__main__':
         horizontal_flip=True,
         vertical_flip=True,
         rotation_range=20,
-        validation_split=0.2)
+        validation_split=0.2
+    )
+
+    # Target resolution settings
+    target_size = (args.img_height, args.img_width)
+    input_shape = (args.img_height, args.img_width, 3)
 
     # Load training data from the specified directory and apply the generator
     # target_size: resizes the images to a specified size
@@ -196,31 +228,35 @@ if __name__ == '__main__':
     # subset: specifies the subset of data to load, in this case, the training set
     train_data = data_generator.flow_from_directory(
         data_path,
-        target_size=(256, 256),
+        target_size=target_size,
         class_mode='binary',
-        batch_size=32,
+        batch_size=args.batch_size,
         shuffle=True,
-        subset='training')
+        subset='training'
+    )
 
     # Load validation data from the specified directory and apply the generator
     # subset: specifies the subset of data to load, in this case, the validation set
     valid_data = data_generator.flow_from_directory(
         data_path,
-        target_size=(256, 256),
+        target_size=target_size,
         class_mode='binary',
-        batch_size=32,
+        batch_size=args.batch_size,
         shuffle=True,
-        subset='validation')
+        subset='validation'
+    )
 
-    """ 7. Data Visualization """
-    # plot_dataset()
+    """ Data Visualization """
+    # plot_dataset(train_data, class_names)
 
-    """ 8. Model Training """
+    """ Model Training """
     # Specify the name of the model as "ResNet152V2".
     name = "ResNet152V2"
 
     # Load the pre-trained ResNet152V2 model, freeze its weights and exclude its final classification layer.
-    base_model = ResNet152V2(include_top=False, input_shape=(256, 256, 3), weights='imagenet')
+    base_model = ResNet152V2(
+        include_top=False, input_shape=input_shape, weights='imagenet'
+    )
     base_model.trainable = False
 
     # Create a sequential model with the ResNet152V2 base model, a global average pooling layer, two fully connected layers, and a final softmax classification layer.
@@ -248,16 +284,18 @@ if __name__ == '__main__':
     # Train the model using the training and validation datasets, using 50 epochs and the previously defined callbacks.
     resnet152V2.fit(
         train_data, validation_data=valid_data,
-        epochs=5, callbacks=cbs
+        epochs=args.epochs, callbacks=cbs
     )
 
-
-    """ 9. Download Model for later use in Android app. Optimized version to be lighter than 200MB """
+    """ Download Model for later use in Android app. Optimized version to be lighter than 200MB """
     keras.models.save_model(resnet152V2, 'resnet152V2.pbtxt')
-    converter = tensorflow.lite.TFLiteConverter.from_keras_model(model=resnet152V2)
+    converter = tensorflow.lite.python.lite.TFLiteConverter.from_keras_model(
+        model=resnet152V2
+    )
 
-    converter.optimizations = [tensorflow.lite.Optimize.DEFAULT]
-    converter.target_spec.supported_types = [tensorflow.float16]
+    converter.optimizations = [tensorflow.lite.python.lite.Optimize.DEFAULT]
+    converter.target_spec.supported_types = [tensorflow.lite.python.lite.float16]
 
     model_tflite = converter.convert()
-    open("dogBreedClassificationModel.tflite", "wb").write(model_tflite)
+    with open(args.output_model, "wb") as f:
+        f.write(model_tflite)

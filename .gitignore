@@ -1,0 +1,126 @@
+
+# ==========================================
+# Python
+# ==========================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+.env
+
+# Machine Learning & Large Model Artifacts
+*.h5
+*.pb
+*.pbtxt
+*.tflite
+*.onnx
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+dataset/
+raw-img/
+sampled-data/
+*.zip
+*.tar.gz
+.datasets/
+
+# Jupyter Notebook & Training Checkpoints
+.ipynb_checkpoints
+*.log
+checkpoint/
+
+# Distribution / Packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.nox/
+.tox/
+
+# ==========================================
+# Android / Java / Kotlin
+# ==========================================
+
+# Built files and Gradle outputs
+*.apk
+*.aab
+*.aar
+*.jar
+*.class
+.gradle/
+build/
+app/build/
+
+# Local configuration files (contains local paths, SDK paths, etc.)
+local.properties
+
+# Android Studio & IntelliJ IDEA project files
+.idea/
+*.iml
+*.iws
+*.ipr
+.navigation/
+captures/
+
+# Android Signing Keys (Keep your release keys secret!)
+*.jks
+*.keystore
+*.p12
+
+# Native build artifacts (NDK)
+.externalNativeBuild/
+.cxx/
+
+# Profiler, NDK logs & cache
+NDK/
+*.log
+
+# ==========================================
+# Operating System & IDE (General)
+# ==========================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehout.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# VS Code
+.vscode/
+*.code-workspace
