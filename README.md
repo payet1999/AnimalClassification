@@ -12,7 +12,8 @@
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License" />
 </p>
 
-An Android app using a custom TensorFlow Lite model to classify animals from camera pictures. If a dog is detected, the app also predicts the dog breed.
+A single activity Android app using a custom TensorFlow Lite model to classify animals from camera pictures. If a dog is
+detected, the app also predicts the dog breed.
 
 ## Repository Background
 
