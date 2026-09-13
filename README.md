@@ -63,8 +63,8 @@ To build and run the application locally:
 │               └── res/          # Layouts (activity_main.xml) & raw resources
 ├── python/
 │   ├── requirements.txt
-│   ├── animals_model_training.py
-│   └── dogs_model_training.py
+│   ├── animals_model_training_script.py
+│   └── dogs_model_training_script.py
 ├── datasets/
 │   ├── animals_dataset/
 │   │   ├── dog/
