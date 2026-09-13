@@ -4,38 +4,71 @@
 # Model -> loss: 0.2883 - accuracy: 0.9055 - val_loss: 0.3348 - val_accuracy: 0.8844
 
 
-""" 1. Importing Libraries for Animal Species Classification """
-
 # Import libraries
+import argparse
 import os  # For interacting with the file system
 import shutil  # For managing files and directories in a cross-platform manner
+
 import keras  # For building deep learning models
+# Training callbacks
+from keras.callbacks import EarlyStopping, ModelCheckpoint  # For training callbacks
+# Model architecture
+from keras import Sequential  # For building sequential models
+# Pre-trained models
+from keras.applications import InceptionV3, ResNet152V2, Xception  # For using pre-trained models
+from keras.layers import Dense, Dropout, GlobalAvgPool2D as GAP  # For defining model layers
+from keras.models import load_model  # For loading pre-trained models
+# Data preprocessing
+from keras.preprocessing.image import ImageDataGenerator  # For image data augmentation
+import matplotlib.pyplot as plt  # For creating static plots
 import numpy as np  # For numerical operations on arrays
-# from glob import glob  # For finding file paths
+import plotly.graph_objs as go  # For interactive visualizations
+import scipy
+# Data visualization
+import seaborn as sns  # For statistical visualizations
 import tensorflow.lite.python.lite
 from tqdm import tqdm  # For progress bars
 
-# Data preprocessing
-from keras.preprocessing.image import ImageDataGenerator  # For image data augmentation
-
-# Data visualization
-import seaborn as sns  # For statistical visualizations
-import plotly.graph_objs as go  # For interactive visualizations
-import matplotlib.pyplot as plt  # For creating static plots
-
-# Model architecture
-from keras import Sequential  # For building sequential models
-from keras.models import load_model  # For loading pre-trained models
-from keras.layers import Dense, GlobalAvgPool2D as GAP, Dropout  # For defining model layers
-
-# Training callbacks
-from keras.callbacks import ModelCheckpoint, EarlyStopping  # For training callbacks
-
-# Pre-trained models
-from keras.applications import InceptionV3, Xception, ResNet152V2  # For using pre-trained models
+# from glob import glob  # For finding file paths
 
 
-def pie_chart():
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Train and export ResNet152V2 model for Animal Species Classification."
+    )
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        default="C:/Users/user/Desktop/Projectes/AnimalClassification/raw-img",
+        help="Path to the raw dataset directory"
+    )
+    parser.add_argument(
+        "--sampled_data_path",
+        type=str,
+        default="./sampled-data",
+        help="Path to the sampled dataset directory"
+    )
+    parser.add_argument(
+        "--sample_percent",
+        type=float,
+        default=0.1,
+        help="Percentage of images to sample per class"
+    )
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
+    parser.add_argument("--epochs", type=int, default=3, help="Number of training epochs")
+    parser.add_argument("--img_height", type=int, default=256, help="Target image height")
+    parser.add_argument("--img_width", type=int, default=256, help="Target image width")
+    parser.add_argument(
+        "--output_model",
+        type=str,
+        default="animalClassificationModel.tflite",
+        help="Output path for the TFLite model"
+    )
+    return parser.parse_args()
+
+
+def pie_chart(class_names, class_sizes):
     """
     Plot a pie graph of the number of images in each class
     :return:
@@ -53,7 +86,7 @@ def pie_chart():
     fig.show()
 
 
-def bar_chart():
+def bar_chart(class_names, class_sizes):
     """
     Plot a bar graph of the number of images in each class
     :return:
@@ -69,7 +102,12 @@ def bar_chart():
     plt.grid()
 
     # Add a horizontal line to show the mean number of images across all classes
-    plt.axhline(np.mean(class_sizes), color='black', linestyle=':', label="Average number of images per class")
+    plt.axhline(
+        np.mean(class_sizes),
+        color='black',
+        linestyle=':',
+        label="Average number of images per class"
+    )
 
     # Add a legend to the plot
     plt.legend()
@@ -78,7 +116,7 @@ def bar_chart():
     plt.show()
 
 
-def create_directory():
+def create_directory(data_path, sampled_data_path, sample_percent=0.1):
     """
     In the code below, we create a smaller, more manageable dataset for training and testing machine learning
     models. We also mapped Italian names to English names to create more understandable naming convention for the
@@ -88,9 +126,6 @@ def create_directory():
     # Create the sampled data directory if it doesn't exist
     if not os.path.exists(sampled_data_path):
         os.mkdir(sampled_data_path)
-
-    # Set the percentage of each class to sample
-    sample_percent = 0.1
 
     # Define a dictionary that maps the original class names to their English names
     class_names_dict = {
@@ -130,7 +165,7 @@ def create_directory():
             shutil.copyfile(src_path, dst_path)
 
 
-def sampled_pie_chart():
+def sampled_pie_chart(class_names, class_sizes):
     # Define the data
     data = go.Pie(labels=class_names, values=class_sizes)
 
@@ -179,7 +214,7 @@ def get_random_data(data_tuple):
     return image, label
 
 
-def plot_dataset():
+def plot_dataset(train_data, class_names):
     # Set the figure size for the plot
     plt.figure(figsize=(20, 20))
 
@@ -200,21 +235,20 @@ def plot_dataset():
         counter += 1
 
         # End the loop when 25 images have been plotted
-        if counter >= 26: break
+        if counter >= 26:
+            break
 
     # Adjust the layout and display the plot
     plt.tight_layout()
     plt.show()
 
-'''
-Main Init
-'''
+
 if __name__ == '__main__':
+    args = parse_args()
 
-
-    """ 2. Exploring the Animal-10 Dataset: Obtaining Class Names and Counting Classes """
+    """ Exploring the Animal-10 Dataset: Obtaining Class Names and Counting Classes """
     # Set the path to the dataset
-    data_path = 'C:/Users/adria/Desktop/Projectes/AnimalClassification/raw-img'
+    data_path = args.data_path
 
     # Get a list of class names from the data path
     class_names = sorted(os.listdir(data_path))
@@ -226,29 +260,26 @@ if __name__ == '__main__':
     print("Class Names: \n", class_names)
     print("Number of Classes:", num_classes)
 
-
-    """ 3. Examining Class Distribution in the Animal-10 Dataset """
+    """ Examining Class Distribution in the Animal-10 Dataset """
     # Get the number of samples in each class
     class_sizes = []
     for name in class_names:
-        class_size = len(os.listdir(data_path + "/" + name))
+        class_size = len(os.listdir(os.path.join(data_path, name)))
         class_sizes.append(class_size)
 
     # Print the class distribution
     print("Class Distribution:\n", class_sizes)
 
+    """ Visualizing Class Distribution in the Animal-10 Dataset using a Pie Chart and Bar Graph """
+    # pie_chart(class_names, class_sizes)
 
-    """ 4. Visualizing Class Distribution in the Animal-10 Dataset using a Pie Chart and Bar Graph """
-    # pie_chart()
+    # bar_chart(class_names, class_sizes)
 
-    # bar_chart()
-
-
-    """ 5. Sampling and Creating Sampled Data Directory """
+    """ Sampling and Creating Sampled Data Directory """
 
     # Set the path to the directory where the sampled data will be saved
-    sampled_data_path = './sampled-data'
-    # create_directory()
+    sampled_data_path = args.sampled_data_path
+    # create_directory(data_path, sampled_data_path, args.sample_percent)
 
     # Get a list of class names from the sampled data directory
     class_names = sorted(os.listdir(sampled_data_path))
@@ -263,10 +294,9 @@ if __name__ == '__main__':
     # Print the class distribution
     print("Class Distribution:\n", class_sizes)
 
-    # sampled_pie_chart()
+    # sampled_pie_chart(class_names, class_sizes)
 
-
-    """ 6. Data Preparation and Augmentation """
+    """ Data Preparation and Augmentation """
     # Initialize Generator with the specified image transformations and preprocessing
     # rescale: normalizes pixel values from 0-255 to 0-1
     # horizontal_flip: randomly flips images horizontally
@@ -278,7 +308,12 @@ if __name__ == '__main__':
         horizontal_flip=True,
         vertical_flip=True,
         rotation_range=20,
-        validation_split=0.2)
+        validation_split=0.2
+    )
+
+    # Resolution dimensions
+    target_size = (args.img_height, args.img_width)
+    input_shape = (args.img_height, args.img_width, 3)
 
     # Load training data from the specified directory and apply the generator
     # target_size: resizes the images to a specified size
@@ -288,33 +323,35 @@ if __name__ == '__main__':
     # subset: specifies the subset of data to load, in this case, the training set
     train_data = data_generator.flow_from_directory(
         sampled_data_path,
-        target_size=(256, 256),
+        target_size=target_size,
         class_mode='binary',
-        batch_size=32,
+        batch_size=args.batch_size,
         shuffle=True,
-        subset='training')
+        subset='training'
+    )
 
     # Load validation data from the specified directory and apply the generator
     # subset: specifies the subset of data to load, in this case, the validation set
     valid_data = data_generator.flow_from_directory(
         sampled_data_path,
-        target_size=(256, 256),
+        target_size=target_size,
         class_mode='binary',
-        batch_size=32,
+        batch_size=args.batch_size,
         shuffle=True,
-        subset='validation')
+        subset='validation'
+    )
 
+    """ Data Visualization """
+    # plot_dataset(train_data, class_names)
 
-    """ 7. Data Visualization """
-    # plot_dataset()
-
-
-    """ 8. Model Training """
+    """ Model Training """
     # Specify the name of the model as "ResNet152V2".
     name = "ResNet152V2"
 
     # Load the pre-trained ResNet152V2 model, freeze its weights and exclude its final classification layer.
-    base_model = ResNet152V2(include_top=False, input_shape=(256, 256, 3), weights='imagenet')
+    base_model = ResNet152V2(
+        include_top=False, input_shape=input_shape, weights='imagenet'
+    )
     base_model.trainable = False
 
     # Create a sequential model with the ResNet152V2 base model, a global average pooling layer, two fully connected layers, and a final softmax classification layer.
@@ -342,14 +379,16 @@ if __name__ == '__main__':
     # Train the model using the training and validation datasets, using 50 epochs and the previously defined callbacks.
     resnet152V2.fit(
         train_data, validation_data=valid_data,
-        epochs=3, callbacks=cbs
+        epochs=args.epochs, callbacks=cbs
     )
 
-
-    """ 9. Download Model for later use in Android app """
+    """ Download Model for later use in Android app """
     keras.models.save_model(resnet152V2, 'resnet152V2.pbtxt')
-    converter = tensorflow.lite.TFLiteConverter.from_keras_model(model=resnet152V2)
+    converter = tensorflow.lite.python.lite.TFLiteConverter.from_keras_model(
+        model=resnet152V2
+    )
     model_tflite = converter.convert()
-    open("animalClassificationModel.tflite", "wb").write(model_tflite)
+    with open(args.output_model, "wb") as f:
+        f.write(model_tflite)
 
     print('++ End of code')
